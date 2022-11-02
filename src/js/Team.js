@@ -13,4 +13,21 @@
  * */
 export default class Team {
   // TODO: write your logic here
+  constructor() {
+    this.characters = new Set();
+  }
+
+  add(character) {
+    this.characters.add(character);
+  }
+
+  addAll(...characters) {
+    for (const character of characters) {
+      this.characters.add(character);
+    }
+  }
+
+  toArray() {
+    this.characters = Array.from(this.characters);
+  }
 }
