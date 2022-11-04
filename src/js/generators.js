@@ -37,6 +37,6 @@ export function generateTeam(allowedTypes, maxLevel, characterCount) {
   }
 
   team.toArray();
-  console.log(team.characters);
+  // console.log(team.characters);
   return team.characters;
 }

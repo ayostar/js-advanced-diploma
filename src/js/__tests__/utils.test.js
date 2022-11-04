@@ -1,4 +1,4 @@
-import { calcTileType } from "../utils";
+import { calcTileType, tooltipCharacter } from "../utils";
 
 test("calcTileType: top-left", () => {
   const expected = "top-left";
@@ -51,5 +51,20 @@ test("calcTileType: left", () => {
 test("calcTileType: center", () => {
   const expected = "center";
   const received = calcTileType(18, 8);
+  expect(received).toBe(expected);
+});
+
+test("Should test tooltipCharacter", () => {
+  const character = {
+    level: 1,
+    attack: 25,
+    defence: 25,
+    health: 50,
+    type: "bowman",
+    distance: 2,
+    distanceAttack: 2,
+  };
+  const received = tooltipCharacter(character);
+  const expected = "🎖1 ⚔25 🛡25 ❤50";
   expect(received).toBe(expected);
 });

@@ -65,3 +65,11 @@ export function calcHealthLevel(health) {
 
   return "high";
 }
+
+export function tooltipCharacter(character) {
+  const level = String.fromCodePoint(0x1f396);
+  const attack = String.fromCodePoint(0x2694);
+  const defence = String.fromCodePoint(0x1f6e1);
+  const health = String.fromCodePoint(0x2764);
+  return `${level}${character.level} ${attack}${character.attack} ${defence}${character.defence} ${health}${character.health}`;
+}
