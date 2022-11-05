@@ -1,5 +1,4 @@
 import themes from "./themes";
-import GameState from "./GameState";
 import { generateTeam } from "./generators";
 import PositionedCharacter from "./PositionedCharacter";
 import Bowman from "./characters/Bowman";
@@ -11,6 +10,7 @@ import Swordsman from "./characters/Swordsman";
 import cursors from "./cursors";
 import { tooltipCharacter } from "./utils";
 import GamePlay from "./GamePlay";
+import GameState from "./GameState";
 
 export default class GameController {
   constructor(gamePlay, stateService) {
@@ -19,13 +19,13 @@ export default class GameController {
     this.charactersToDraw = [];
     this.players = {
       user: {
-        name: "user",
+        side: "user",
         first: 0,
         second: 1,
         characters: [Swordsman, Bowman, Magician],
       },
       computer: {
-        name: "computer",
+        side: "computer",
         first: this.gamePlay.boardSize - 1,
         second: this.gamePlay.boardSize - 2,
         characters: [Undead, Vampire, Daemon],
@@ -66,6 +66,12 @@ export default class GameController {
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
     // TODO: load saved stated from stateService
+
+    this.gamePlay.addNewGameListener(
+      this.newGame.bind(this, this.level, this.theme)
+    );
+    this.gamePlay.addSaveGameListener(this.saveGame.bind(this));
+    this.gamePlay.addLoadGameListener(this.loadGame.bind(this));
 
     window.addEventListener("unload", () => {
       sessionStorage.setItem("reload", JSON.stringify(GameState.from(this)));
@@ -115,6 +121,92 @@ export default class GameController {
     this.gamePlay.redrawPositions(this.charactersToDraw);
   }
 
+  saveGame() {
+    if (!this.charactersToDraw.length) {
+      GamePlay.showError("Нет игры для сохранения");
+    } else {
+      const state = GameState.from(this);
+      this.stateService.save(state);
+      GamePlay.showMessage("Игра сохранена");
+    }
+  }
+
+  loadGame() {
+    const state = this.stateService.load();
+
+    if (!state) {
+      GamePlay.showError("Нет сохраненной игры");
+    } else {
+      this.loadState(state);
+      GamePlay.showMessage("Игра загружена");
+    }
+  }
+
+  clear() {
+    this.level = 1;
+    this.charactersToDraw = [];
+    this.selectedCharacter = null;
+    this.theme = themes.prairie;
+  }
+
+  onEsc() {
+    this.clear();
+    this.score = 0;
+    this.gamePlay.drawUi(this.theme);
+  }
+
+  clear() {
+    this.level = 1;
+    this.charactersToDraw = [];
+    this.selectedCharacter = null;
+    this.theme = themes.prairie;
+  }
+
+  levelUp() {
+    this.level += 1;
+    this.charactersToDraw.forEach((hero) => {
+      hero.character.level = this.level;
+      hero.character.attack = Math.ceil(
+        Math.max(
+          hero.character.attack,
+          hero.character.attack *
+            (1.8 -
+              (hero.character.health === 1 ? 80 : hero.character.health) / 100)
+        )
+      );
+      hero.character.defence = Math.ceil(
+        Math.max(
+          hero.character.defence,
+          hero.character.defence *
+            (1.8 -
+              (hero.character.health === 1 ? 80 : hero.character.health) / 100)
+        )
+      );
+      hero.character.health = Math.ceil(
+        hero.character.health + 80 > 100 ? 100 : hero.character.health + 80
+      );
+    });
+    switch (this.level) {
+      case 2:
+        this.gamePlay.drawUi(themes.desert);
+        this.theme = themes.desert;
+        break;
+      case 3:
+        this.gamePlay.drawUi(themes.arctic);
+        this.theme = themes.arctic;
+        break;
+      case 4:
+        this.gamePlay.drawUi(themes.mountain);
+        this.theme = themes.mountain;
+        break;
+      default:
+        this.gamePlay.drawUi(themes.prairie);
+        this.theme = themes.prairie;
+        break;
+    }
+    return this.level;
+  }
+
   newGame(level = 1, theme = themes.prairie) {
     this.level = level;
     this.gamePlay.deselectAllCells();
@@ -133,13 +225,6 @@ export default class GameController {
       this.players.computer
     );
 
-    // function getCharacterPosition(possibleCellsArray) {
-    //   const cellIndex = Math.floor(Math.random() * possibleCellsArray.length);
-    //   const characterCell = possibleCellsArray[cellIndex];
-    //   possibleCellsArray.splice(cellIndex, 1);
-    //   return characterCell;
-    // }
-
     if (!this.charactersToDraw.length) {
       const userTeam = generateTeam(this.players.user.characters, level, 2);
       const computerTeam = generateTeam(
@@ -153,7 +238,7 @@ export default class GameController {
           (item) =>
             new PositionedCharacter(
               item,
-              this.players.user.name,
+              this.players.user.side,
               this.getCharacterPosition(userAllPossibleCells)
             )
         ),
@@ -161,7 +246,7 @@ export default class GameController {
           (item) =>
             new PositionedCharacter(
               item,
-              this.players.computer.name,
+              this.players.computer.side,
               this.getCharacterPosition(computerAllPossibleCells)
             )
         ),
@@ -176,8 +261,8 @@ export default class GameController {
         (position) =>
           !this.charactersToDraw.find((hero) => hero.position === position)
       );
-      const survivorsuser = this.charactersToDraw.length;
-      // let userTeam;
+      const survivedUserCharacter = this.charactersToDraw.length;
+      let userTeam;
 
       if (level === 2) {
         userTeam = generateTeam(this.players.user.characters, level - 1, 1);
@@ -190,14 +275,14 @@ export default class GameController {
       const computerTeam = generateTeam(
         this.players.computer.characters,
         level,
-        userTeam.length + survivorsuser
+        userTeam.length + survivedUserCharacter
       );
       this.charactersToDraw.push(
         userTeam.map(
           (item) =>
             new PositionedCharacter(
               item,
-              this.players.user.name,
+              this.players.user.side,
               this.getCharacterPosition(userFiltered)
             )
         )
@@ -207,7 +292,7 @@ export default class GameController {
           (item) =>
             new PositionedCharacter(
               item,
-              this.players.computer.name,
+              this.players.computer.side,
               this.getCharacterPosition(computerAllPossibleCells)
             )
         )
@@ -235,39 +320,38 @@ export default class GameController {
     const y = Math.floor(clickedCharacter.position / boardSize);
     const areaMove = [];
     for (let i = 1; i <= distance; i += 1) {
-      // Движемся вправо
       let xFree = x + i;
       if (xFree < boardSize) {
         areaMove.push(this.area[y][xFree]);
       }
-      // Движемся вниз
+
       let yFree = y + i;
       if (yFree < boardSize) {
         areaMove.push(this.area[yFree][x]);
       }
-      // Движемся по диагонали вправо и вниз
+
       if (yFree < boardSize && xFree < boardSize) {
         areaMove.push(this.area[yFree][xFree]);
       }
-      // Движемся влево
+
       xFree = x - i;
       if (xFree >= 0) {
         areaMove.push(this.area[y][xFree]);
       }
-      // Движемся по диагонали влево и вниз
+
       if (xFree >= 0 && yFree < boardSize) {
         areaMove.push(this.area[yFree][xFree]);
       }
-      // Движемся вверх
+
       yFree = y - i;
       if (yFree >= 0) {
         areaMove.push(this.area[yFree][x]);
       }
-      // Движемся по диагонали влево и вверх
+
       if (yFree >= 0 && xFree >= 0) {
         areaMove.push(this.area[yFree][xFree]);
       }
-      // Движемся по диагонали в право и вверх
+
       xFree = x + i;
       if (xFree < boardSize && yFree >= 0) {
         areaMove.push(this.area[yFree][xFree]);
@@ -278,19 +362,16 @@ export default class GameController {
 
   getAreaAttack(clickedCharacter, distance) {
     const areaAttack = [];
-    // Определяем пространство по вертикали
+
     for (
       let i = clickedCharacter.position - this.gamePlay.boardSize * distance;
       i <= clickedCharacter.position + this.gamePlay.boardSize * distance;
       i += this.gamePlay.boardSize
     ) {
-      // Определяем пространство по горизонтали
       if (i >= 0 && i < this.gamePlay.boardSize ** 2) {
         for (let j = i - distance; j <= i + distance; j += 1) {
           if (
-            // Ограничиваем слева
             j >= i - (i % this.gamePlay.boardSize) &&
-            // Ограничиваем справа
             j < i + (this.gamePlay.boardSize - (i % this.gamePlay.boardSize))
           ) {
             areaAttack.push(j);
@@ -298,15 +379,15 @@ export default class GameController {
         }
       }
     }
-    // Удаляем клетку героя из списка возможных ходов
+
     areaAttack.splice(areaAttack.indexOf(clickedCharacter.position), 1);
     return areaAttack;
   }
 
-  moveDefending(defending, attacker, enemies) {
+  moveDefender(defender, attacker, enemies) {
     const movements = this.getAreaMove(
-      defending,
-      defending.character.distance
+      defender,
+      defender.character.distance
     ).filter(
       (item) =>
         this.charactersToDraw.findIndex((hero) => hero.position === item) === -1
@@ -316,88 +397,69 @@ export default class GameController {
       y: Math.floor(hero.position / this.gamePlay.boardSize),
     });
     const coordinatesHeroes = {
-      defending: coordinates(defending),
+      defender: coordinates(defender),
       attacker: coordinates(attacker),
     };
 
-    const probablePlaces = () => {
-      // Вариант 1: движемся влево
-      if (coordinatesHeroes.attacker.x <= coordinatesHeroes.defending.x) {
-        // Вариант 1.1: движемся влево и вверх
-        if (coordinatesHeroes.attacker.y <= coordinatesHeroes.defending.y) {
+    const possibleCells = () => {
+      if (coordinatesHeroes.attacker.x <= coordinatesHeroes.defender.x) {
+        if (coordinatesHeroes.attacker.y <= coordinatesHeroes.defender.y) {
           return movements.filter(
-            // Ограничиваем слева
             (item) =>
               item % this.gamePlay.boardSize >= coordinatesHeroes.attacker.x &&
-              // Ограничиваем справа
-              item % this.gamePlay.boardSize <= coordinatesHeroes.defending.x &&
-              // Ограничиваем снизу
+              item % this.gamePlay.boardSize <= coordinatesHeroes.defender.x &&
               Math.floor(item / this.gamePlay.boardSize) <=
-                coordinatesHeroes.defending.y &&
-              // Ограничиваем сверху
+                coordinatesHeroes.defender.y &&
               Math.floor(item / this.gamePlay.boardSize) >=
                 coordinatesHeroes.attacker.y
           );
         }
-        //  Вариант 1.2: движемся влево и вниз
+
         return movements.filter(
-          // Ограничиваем слева
           (item) =>
             item % this.gamePlay.boardSize >= coordinatesHeroes.attacker.x &&
-            // Ограничиваем справа
-            item % this.gamePlay.boardSize <= coordinatesHeroes.defending.x &&
-            // Ограничиваем сверху
+            item % this.gamePlay.boardSize <= coordinatesHeroes.defender.x &&
             Math.floor(item / this.gamePlay.boardSize) >
-              coordinatesHeroes.defending.y &&
-            // Ограничиваем снизу
+              coordinatesHeroes.defender.y &&
             Math.floor(item / this.gamePlay.boardSize) <=
               coordinatesHeroes.attacker.y
         );
       }
-      //  Вариант 2: движемся вправо
-      // Вариант 2.1: движемся вправо и вверх
-      if (coordinatesHeroes.attacker.y <= coordinatesHeroes.defending.y) {
+
+      if (coordinatesHeroes.attacker.y <= coordinatesHeroes.defender.y) {
         return movements.filter(
-          // Ограничиваем справа
           (item) =>
             item % this.gamePlay.boardSize <= coordinatesHeroes.attacker.x &&
-            // Ограничиваем слева
-            item % this.gamePlay.boardSize > coordinatesHeroes.defending.x &&
-            // Ограничиваем снизу
+            item % this.gamePlay.boardSize > coordinatesHeroes.defender.x &&
             Math.floor(item / this.gamePlay.boardSize) <=
-              coordinatesHeroes.defending.y &&
-            // Ограничиваем сверху
+              coordinatesHeroes.defender.y &&
             Math.floor(item / this.gamePlay.boardSize) >=
               coordinatesHeroes.attacker.y
         );
       }
-      //  Вариант 2.2: движемся вправо и вниз
+
       return movements.filter(
-        // Ограничиваем справа
         (item) =>
           item % this.gamePlay.boardSize <= coordinatesHeroes.attacker.x &&
-          // Ограничиваем слева
-          item % this.gamePlay.boardSize > coordinatesHeroes.defending.x &&
-          // Ограничиваем сверху
+          item % this.gamePlay.boardSize > coordinatesHeroes.defender.x &&
           Math.floor(item / this.gamePlay.boardSize) >
-            coordinatesHeroes.defending.y &&
-          // Ограничиваем снизу
+            coordinatesHeroes.defender.y &&
           Math.floor(item / this.gamePlay.boardSize) <=
             coordinatesHeroes.attacker.y
       );
     };
 
-    const probables = probablePlaces();
-    if (!probables.length) {
+    const possibilities = possibleCells();
+    if (!possibilities.length) {
       if (!movements.length) {
         const otherEnemies = [...enemies];
-        otherEnemies.splice(enemies.indexOf(defending), 1);
-        defending =
+        otherEnemies.splice(enemies.indexOf(defender), 1);
+        defender =
           otherEnemies[Math.floor(Math.random() * otherEnemies.length)];
       }
       const randomMovements = this.getAreaMove(
-        defending,
-        defending.character.distance
+        defender,
+        defender.character.distance
       ).filter(
         (item) =>
           this.charactersToDraw.findIndex((hero) => hero.position === item) ===
@@ -407,15 +469,14 @@ export default class GameController {
         Math.floor(Math.random() * randomMovements.length)
       ];
     }
-    return probables[Math.floor(Math.random() * probablePlaces.length)];
+    return possibilities[Math.floor(Math.random() * possibleCells.length)];
   }
 
-  movecomputerCellAttack() {
+  computerAction() {
     this.gamePlay.deselectAllCells();
     const enemies = this.charactersToDraw.filter(
-      (hero) => hero.side === this.players.computer.name
+      (hero) => hero.side === this.players.computer.side
     );
-    // Атаковать будет самый сильный персонаж
     const computerCellAttacker = enemies.find(
       (item) =>
         item.character.attack ===
@@ -433,7 +494,7 @@ export default class GameController {
           computerCellAttacker.character.attack * 0.1
         )
       );
-      // Если цель в пределах атаки - к бою!
+
       if (
         this.getAreaAttack(
           computerCellAttacker,
@@ -442,38 +503,36 @@ export default class GameController {
       ) {
         this.selectedCharacter.character.health -= damageToAttacker;
         resolve(damageToAttacker);
-        //  Иначе - движемся к нему
       } else {
         reject({ computerCellAttacker, enemies });
       }
     });
   }
+
+  actionAfterAttack() {
+    if (this.selectedCharacter.character.health <= 0) {
+      this.charactersToDraw.splice(
+        this.charactersToDraw.indexOf(this.selectedCharacter),
+        1
+      );
+    }
+    this.gamePlay.redrawPositions(this.charactersToDraw);
+    this.selectedCharacter = null;
+
+    if (
+      !this.charactersToDraw.find(
+        (item) => item.side === this.players.user.side
+      )
+    ) {
+      GamePlay.showMessage("Игра окончена!");
+      this.clear();
+      this.score = 0;
+      this.gamePlay.drawUi(this.theme);
+    }
+  }
+
   onCellClick(index) {
     // TODO: react to click
-    function actionAfterAttack() {
-      if (
-        this.selectedCharacter <= 0 ||
-        this.selectedCharacter.character.health <= 0
-      ) {
-        this.charactersToDraw.splice(
-          this.charactersToDraw.indexOf(this.selectedCharacter),
-          1
-        );
-      }
-      this.gamePlay.redrawPositions(this.charactersToDraw);
-      this.selectedCharacter = null;
-
-      if (
-        !this.charactersToDraw.find(
-          (item) => item.side === this.players.user.name
-        )
-      ) {
-        GamePlay.showMessage("Игра окончена!");
-        this.clear();
-        this.score = 0;
-        this.gamePlay.drawUi(this.theme);
-      }
-    }
 
     const clickedCharacter = this.charactersToDraw.find(
       (item) => item.position === index
@@ -491,13 +550,12 @@ export default class GameController {
         GamePlay.showError("Это персонаж противника!");
       }
     } else if (this.currentStatus === this.boardCell.vacantCell) {
-      // Чтобы двигать
       [this.selectedCharacter.position, index].forEach((cell) =>
         this.gamePlay.deselectCell(cell)
       );
       this.selectedCharacter.position = index;
       this.gamePlay.redrawPositions(this.charactersToDraw);
-      this.movecomputerCellAttack()
+      this.computerAction()
         .then(
           (damageToAttacker) =>
             this.gamePlay.showDamage(
@@ -505,15 +563,14 @@ export default class GameController {
               damageToAttacker
             ),
           (reject) => {
-            reject.computerCellAttacker.position = this.moveDefending(
+            reject.computerCellAttacker.position = this.moveDefender(
               reject.computerCellAttacker,
               this.selectedCharacter,
               reject.enemies
             );
           }
         )
-        .then(actionAfterAttack.bind(this));
-      // Щёлкнули по союзнику
+        .then(this.actionAfterAttack.bind(this));
     } else if (
       this.currentStatus === this.boardCell.userCell &&
       this.selectedCharacter !== clickedCharacter
@@ -521,30 +578,26 @@ export default class GameController {
       this.gamePlay.deselectCell(this.selectedCharacter.position);
       this.selectedCharacter = clickedCharacter;
       this.gamePlay.selectCell(index);
-      // Щёлкнули по врагу
     } else if (this.currentStatus === this.boardCell.computerCell) {
-      const opponent = this.charactersToDraw.find(
+      const enemy = this.charactersToDraw.find(
         (hero) => hero.position === index
       );
-      const damageToOpponent = Math.ceil(
+      const enemyDamage = Math.ceil(
         Math.max(
-          this.selectedCharacter.character.attack - opponent.character.defence,
+          this.selectedCharacter.character.attack - enemy.character.defence,
           this.selectedCharacter.character.attack * 0.1
         )
       );
-      opponent.character.health -= damageToOpponent;
-      // Если убили - удаляем с поля
-      if (opponent.character.health <= 0) {
-        this.charactersToDraw.splice(
-          this.charactersToDraw.indexOf(opponent),
-          1
-        );
+      enemy.character.health -= enemyDamage;
+
+      if (enemy.character.health <= 0) {
+        this.charactersToDraw.splice(this.charactersToDraw.indexOf(enemy), 1);
         this.gamePlay.redrawPositions(this.charactersToDraw);
         this.gamePlay.deselectAllCells();
-        // Убил противника: либо победа, либо он отвечает
+
         if (
           !this.charactersToDraw.find(
-            (item) => item.side === this.players.computer.name
+            (item) => item.side === this.players.computer.side
           )
         ) {
           this.selectedCharacter = null;
@@ -553,19 +606,19 @@ export default class GameController {
             this.score
           );
           if (this.level === 4) {
-            GamePlay.showMessage(`Победа! Ваш счет равен ${this.score}.`);
+            GamePlay.showMessage(`Вы выиграли! Ваш счет равен ${this.score}.`);
             this.clear();
             this.gamePlay.drawUi(this.theme);
           } else {
             GamePlay.showMessage(
-              `Победа! Переход на уровень ${this.level + 1}! Ваш счет равен ${
-                this.score
-              }.`
+              `Вы выиграли! Переход на уровень ${
+                this.level + 1
+              }! Ваш счет равен ${this.score}.`
             );
             this.newGame(this.levelUp(), this.theme);
           }
         } else {
-          this.movecomputerCellAttack()
+          this.computerAction()
             .then(
               (damageToAttacker) =>
                 this.gamePlay.showDamage(
@@ -573,21 +626,20 @@ export default class GameController {
                   damageToAttacker
                 ),
               (reject) => {
-                reject.computerCellAttacker.position = this.moveDefending(
+                reject.computerCellAttacker.position = this.moveDefender(
                   reject.computerCellAttacker,
                   this.selectedCharacter,
                   reject.enemies
                 );
               }
             )
-            .then(actionAfterAttack.bind(this));
+            .then(this.actionAfterAttack.bind(this));
         }
       } else {
         this.gamePlay
-          .showDamage(index, damageToOpponent)
+          .showDamage(index, enemyDamage)
           .then(() => this.gamePlay.redrawPositions(this.charactersToDraw))
-          // Ответ компьютера
-          .then(() => this.movecomputerCellAttack())
+          .then(() => this.computerAction())
           .then(
             (damageToAttacker) =>
               this.gamePlay.showDamage(
@@ -595,19 +647,19 @@ export default class GameController {
                 damageToAttacker
               ),
             (reject) => {
-              reject.computerCellAttacker.position = this.moveDefending(
+              reject.computerCellAttacker.position = this.moveDefender(
                 reject.computerCellAttacker,
                 this.selectedCharacter,
                 reject.enemies
               );
             }
           )
-          .then(actionAfterAttack.bind(this));
+          .then(this.actionAfterAttack.bind(this));
       }
-      //  В ином случае - ошибка
     } else {
-      GamePlay.showError("Это действие запрещено!");
+      GamePlay.showError("Так делать нельзя");
       this.gamePlay.deselectCell(this.selectedCharacter.position);
+      this.gamePlay.setCursor(cursors.notallowed);
       this.selectedCharacter = null;
     }
   }
@@ -643,7 +695,7 @@ export default class GameController {
         (item) =>
           this.charactersToDraw.findIndex(
             (hero) =>
-              hero.position === item && hero.side === this.players.user.name
+              hero.position === item && hero.side === this.players.user.side
           ) === -1
       );
       if (this.movements.includes(index)) {
@@ -653,7 +705,7 @@ export default class GameController {
       } else if (
         this.possibleAttackCells.includes(index) &&
         this.charactersToDraw
-          .filter((item) => item.side === this.players.computer.name)
+          .filter((item) => item.side === this.players.computer.side)
           .find((item) => item.position === index)
       ) {
         this.gamePlay.selectCell(index, "red");
@@ -661,7 +713,7 @@ export default class GameController {
         this.currentStatus = this.boardCell.computerCell;
       } else if (
         this.charactersToDraw
-          .filter((item) => item.side === this.players.user.name)
+          .filter((item) => item.side === this.players.user.side)
           .find(
             (item) =>
               item.position === index &&
@@ -671,12 +723,12 @@ export default class GameController {
         this.gamePlay.setCursor(cursors.pointer);
         this.currentStatus = this.boardCell.userCell;
       } else {
-        this.gamePlay.setCursor(cursors.forbiddenCell);
+        this.gamePlay.setCursor(cursors.notallowed);
         this.currentStatus = this.boardCell.forbiddenCell;
       }
     } else if (
       this.charactersToDraw
-        .filter((hero) => hero.side === this.players.user.name)
+        .filter((hero) => hero.side === this.players.user.side)
         .find((item) => item.position === index)
     ) {
       this.gamePlay.setCursor(cursors.pointer);

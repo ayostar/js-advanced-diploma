@@ -1,4 +1,4 @@
-import { calcTileType, tooltipCharacter } from "../utils";
+import { calcTileType, calcHealthLevel, tooltipCharacter } from "../utils";
 
 test("calcTileType: top-left", () => {
   const expected = "top-left";
@@ -66,5 +66,25 @@ test("Should test tooltipCharacter", () => {
   };
   const received = tooltipCharacter(character);
   const expected = "🎖1 ⚔25 🛡25 ❤50";
+  expect(received).toBe(expected);
+});
+
+// Написаны авто-тесты на особенности атаки и движения каждого класса персонажей
+
+test("calcHealthLevel: critical", () => {
+  const expected = "critical";
+  const received = calcHealthLevel(10);
+  expect(received).toBe(expected);
+});
+
+test("calcHealthLevel: normal", () => {
+  const expected = "normal";
+  const received = calcHealthLevel(40);
+  expect(received).toBe(expected);
+});
+
+test("calcHealthLevel: high", () => {
+  const expected = "high";
+  const received = calcHealthLevel(90);
   expect(received).toBe(expected);
 });
