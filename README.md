@@ -1,6 +1,6 @@
 # TEST STATUS
 
-[![Build status](https://ci.appveyor.com/api/projects/status/93c62ntaukbhoefj?svg=false)](https://ci.appveyor.com/project/ayostar/js-advanced-diploma/branch/master)
+[![Build status](https://ci.appveyor.com/api/projects/status/5rkiaguvpunrix09?svg=true)](https://ci.appveyor.com/project/ayostar/js-advanced-diploma)
 
 # Дипломное задание к курсу «Продвинутый JavaScript». Retro Game
 
