@@ -69,8 +69,6 @@ test("Should test tooltipCharacter", () => {
   expect(received).toBe(expected);
 });
 
-// Написаны авто-тесты на особенности атаки и движения каждого класса персонажей
-
 test("calcHealthLevel: critical", () => {
   const expected = "critical";
   const received = calcHealthLevel(10);

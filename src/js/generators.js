@@ -12,13 +12,11 @@ import Team from "./Team";
 export function* characterGenerator(allowedTypes, maxLevel) {
   // TODO: write logic here
   while (true) {
-    const i = Math.floor(Math.random() * allowedTypes.length);
-    console.log(allowedTypes);
-    console.log(Math.random());
+    const type = Math.floor(Math.random() * allowedTypes.length);
 
     const level = Math.ceil(Math.random() * maxLevel);
 
-    yield { character: new allowedTypes[i](level), level };
+    yield { character: new allowedTypes[type](level), level };
   }
 }
 

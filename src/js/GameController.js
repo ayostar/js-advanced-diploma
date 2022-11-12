@@ -226,7 +226,9 @@ export default class GameController {
     );
 
     if (!this.charactersToDraw.length) {
+      console.log(this.players.user.characters);
       const userTeam = generateTeam(this.players.user.characters, level, 2);
+      console.log(userTeam);
       const computerTeam = generateTeam(
         this.players.computer.characters,
         level,
@@ -357,6 +359,7 @@ export default class GameController {
         areaMove.push(this.area[yFree][xFree]);
       }
     }
+
     return areaMove;
   }
 
@@ -381,6 +384,7 @@ export default class GameController {
     }
 
     areaAttack.splice(areaAttack.indexOf(clickedCharacter.position), 1);
+
     return areaAttack;
   }
 

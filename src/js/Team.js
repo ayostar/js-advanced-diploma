@@ -21,11 +21,11 @@ export default class Team {
     this.characters.add(character);
   }
 
-  addAll(...characters) {
-    for (const character of characters) {
-      this.characters.add(character);
-    }
-  }
+  // addAll(...characters) {
+  //   for (const character of characters) {
+  //     this.characters.add(character);
+  //   }
+  // }
 
   toArray() {
     this.characters = Array.from(this.characters);
