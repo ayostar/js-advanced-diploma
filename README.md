@@ -2,7 +2,7 @@
 
 [![Build status](https://ci.appveyor.com/api/projects/status/5rkiaguvpunrix09?svg=true)](https://ci.appveyor.com/project/ayostar/js-advanced-diploma)
 
-[![GITHUB PAGES](https://ayostar.github.io/js-advanced-diploma/)]
+[[GITHUB PAGES](https://ayostar.github.io/js-advanced-diploma/)]
 
 # Дипломное задание к курсу «Продвинутый JavaScript». Retro Game
 
