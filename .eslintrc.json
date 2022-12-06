@@ -11,7 +11,17 @@
     "sourceType": "module"
   },
   "rules": {
-    "import/extensions": ["error", "ignorePackages"],
-    "no-console": "off"
+    "import/extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "js": "never",
+        "jsx": "never",
+        "ts": "never",
+        "tsx": "never"
+      }
+    ],
+    "no-console": "off",
+    "no-plusplus": "off"
   }
 }

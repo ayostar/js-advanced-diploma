@@ -6,7 +6,7 @@
   "scripts": {
     "start": "webpack serve --mode development",
     "build": "webpack --mode production",
-    "lint": "eslint",
+    "lint": "eslint --fix src/js/**/*.js",
     "test": "jest",
     "coverage": "jest --coverage"
   },

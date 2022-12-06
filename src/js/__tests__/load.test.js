@@ -1,16 +1,16 @@
-import GameStateService from "../GameStateService";
+import GameStateService from '../GameStateService';
 
-jest.mock("../GameStateService");
+jest.mock('../GameStateService');
 
 beforeEach(() => {
   jest.resetAllMocks();
 });
 
-test("Should load saved game", () => {
+test('Should load saved game', () => {
   const state = {
     level: 1,
     positions: [],
-    theme: "prairie",
+    theme: 'prairie',
     score: 0,
   };
   const stateService = new GameStateService();
