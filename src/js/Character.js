@@ -24,4 +24,29 @@ export default class Character {
       throw new Error("Нельзя использовать New Character()");
     }
   }
+
+  static levelUp(charactersToLevelUp, currentLevel) {
+    charactersToLevelUp.forEach((hero) => {
+      hero.character.level = currentLevel;
+      hero.character.attack = Math.ceil(
+        Math.max(
+          hero.character.attack,
+          hero.character.attack *
+            (1.8 -
+              (hero.character.health === 1 ? 80 : hero.character.health) / 100)
+        )
+      );
+      hero.character.defence = Math.ceil(
+        Math.max(
+          hero.character.defence,
+          hero.character.defence *
+            (1.8 -
+              (hero.character.health === 1 ? 80 : hero.character.health) / 100)
+        )
+      );
+      hero.character.health = Math.ceil(
+        hero.character.health + 80 > 100 ? 100 : hero.character.health + 80
+      );
+    });
+  }
 }

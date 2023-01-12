@@ -1,5 +1,5 @@
 import themes from "./themes";
-import { generateTeam } from "./generators";
+import { generateTeam, characterGenerator } from "./generators";
 import PositionedCharacter from "./PositionedCharacter";
 import Bowman from "./characters/Bowman";
 import Daemon from "./characters/Daemon";
@@ -11,6 +11,7 @@ import cursors from "./cursors";
 import { tooltipCharacter } from "./utils";
 import GamePlay from "./GamePlay";
 import GameState from "./GameState";
+import Character from "./Character";
 
 export default class GameController {
   constructor(gamePlay, stateService) {
@@ -45,6 +46,7 @@ export default class GameController {
     this.currentStatus = null;
     this.charactersToDraw = [];
     this.area = this.getRowArray();
+    this.characterCount = 2;
   }
 
   init() {
@@ -164,28 +166,8 @@ export default class GameController {
 
   levelUp() {
     this.level += 1;
-    this.charactersToDraw.forEach((hero) => {
-      hero.character.level = this.level;
-      hero.character.attack = Math.ceil(
-        Math.max(
-          hero.character.attack,
-          hero.character.attack *
-            (1.8 -
-              (hero.character.health === 1 ? 80 : hero.character.health) / 100)
-        )
-      );
-      hero.character.defence = Math.ceil(
-        Math.max(
-          hero.character.defence,
-          hero.character.defence *
-            (1.8 -
-              (hero.character.health === 1 ? 80 : hero.character.health) / 100)
-        )
-      );
-      hero.character.health = Math.ceil(
-        hero.character.health + 80 > 100 ? 100 : hero.character.health + 80
-      );
-    });
+    Character.levelUp(this.charactersToDraw, this.level);
+
     switch (this.level) {
       case 2:
         this.gamePlay.drawUi(themes.desert);
@@ -226,33 +208,37 @@ export default class GameController {
     );
 
     if (!this.charactersToDraw.length) {
-      console.log(this.players.user.characters);
-      const userTeam = generateTeam(this.players.user.characters, level, 2);
-      console.log(userTeam);
+      console.log("New game");
+      const userTeam = generateTeam(
+        this.players.user.characters,
+        level,
+        this.characterCount
+      );
       const computerTeam = generateTeam(
         this.players.computer.characters,
         level,
-        2
+        this.characterCount
       );
 
-      this.charactersToDraw = [
-        userTeam.map(
-          (item) =>
-            new PositionedCharacter(
-              item,
-              this.players.user.side,
-              this.getCharacterPosition(userAllPossibleCells)
-            )
-        ),
-        computerTeam.map(
-          (item) =>
-            new PositionedCharacter(
-              item,
-              this.players.computer.side,
-              this.getCharacterPosition(computerAllPossibleCells)
-            )
-        ),
-      ].flat();
+      userTeam.characters.forEach((character) => {
+        this.charactersToDraw.push(
+          new PositionedCharacter(
+            character,
+            this.players.user.side,
+            this.getCharacterPosition(userAllPossibleCells)
+          )
+        );
+      });
+
+      computerTeam.characters.forEach((character) => {
+        this.charactersToDraw.push(
+          new PositionedCharacter(
+            character,
+            this.players.computer.side,
+            this.getCharacterPosition(computerAllPossibleCells)
+          )
+        );
+      });
     } else {
       this.charactersToDraw.forEach((hero) => {
         hero.position = this.getCharacterPosition(userAllPossibleCells);
@@ -263,43 +249,49 @@ export default class GameController {
         (position) =>
           !this.charactersToDraw.find((hero) => hero.position === position)
       );
-      const survivedUserCharacter = this.charactersToDraw.length;
+
       let userTeam;
 
       if (level === 2) {
-        userTeam = generateTeam(this.players.user.characters, level - 1, 1);
+        if (this.charactersToDraw.length === 1) {
+          userTeam = generateTeam(this.players.user.characters, level - 1, 1);
+        } else userTeam = generateTeam(this.players.user.characters, level, 0);
       }
 
       if (level === 3 || level === 4) {
-        userTeam = generateTeam(this.players.user.characters, level - 1, 2);
+        if (this.charactersToDraw.length === 1) {
+          userTeam = generateTeam(this.players.user.characters, level - 1, 1);
+        } else userTeam = generateTeam(this.players.user.characters, level, 0);
       }
+      console.log(userTeam);
+
+      userTeam.characters.forEach((character) => {
+        this.charactersToDraw.push(
+          new PositionedCharacter(
+            character,
+            this.players.user.side,
+            this.getCharacterPosition(userAllPossibleCells)
+          )
+        );
+      });
 
       const computerTeam = generateTeam(
         this.players.computer.characters,
         level,
-        userTeam.length + survivedUserCharacter
+        this.characterCount
       );
-      this.charactersToDraw.push(
-        userTeam.map(
-          (item) =>
-            new PositionedCharacter(
-              item,
-              this.players.user.side,
-              this.getCharacterPosition(userFiltered)
-            )
-        )
-      );
-      this.charactersToDraw.push(
-        computerTeam.map(
-          (item) =>
-            new PositionedCharacter(
-              item,
-              this.players.computer.side,
-              this.getCharacterPosition(computerAllPossibleCells)
-            )
-        )
-      );
-      this.charactersToDraw = this.charactersToDraw.flat();
+
+      computerTeam.characters.forEach((character) => {
+        this.charactersToDraw.push(
+          new PositionedCharacter(
+            character,
+            this.players.computer.side,
+            this.getCharacterPosition(computerAllPossibleCells)
+          )
+        );
+      });
+
+      console.log(this.charactersToDraw);
     }
     this.gamePlay.redrawPositions(this.charactersToDraw);
   }

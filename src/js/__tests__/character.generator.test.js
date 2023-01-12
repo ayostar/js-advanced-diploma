@@ -32,8 +32,13 @@ test('should test generateTeam Bowman(1) quantity 2', () => {
   const allowedTypes = [Bowman];
   const maxLevel = 1;
   const generatedTeam = generateTeam(allowedTypes, maxLevel, 2);
-  const bowman = new Bowman(1);
-  expect(generatedTeam.length).toBe(2);
-  expect(generatedTeam[0]).toEqual(bowman);
-  expect(generatedTeam[1]).toEqual(bowman);
+
+  const iterTeam = generatedTeam.characters.values();
+  expect(generatedTeam.characters.size).toBe(2);
+  expect(iterTeam.next().value).toEqual(
+    characterGenerator(allowedTypes, maxLevel).next().value.character,
+  );
+  expect(iterTeam.next().value).toEqual(
+    characterGenerator(allowedTypes, maxLevel).next().value.character,
+  );
 });

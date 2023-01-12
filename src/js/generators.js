@@ -37,6 +37,8 @@ export function generateTeam(allowedTypes, maxLevel, characterCount) {
     team.add(nextHero.character);
   }
 
-  team.toArray();
-  return team.characters;
+  // Написано возвращает экземляр Team, а на самом деле массив персонажей
+  // ++++ ТЕСТЫ
+
+  return team;
 }
